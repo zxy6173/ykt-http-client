@@ -1,10 +1,12 @@
 var http = require("http");
 var querystring =  require("querystring");
+var urlobj = require("url");
 var request = function(method,url,data,func){
     let promise = new Promise(function(resolve,reject){
-        let hp = url.substring(0,url.indexOf("/"));
-        let path = url.substring(url.indexOf("/"));
-        let strs = hp.split(":");
+        let parseURL = urlobj.parse(url);
+        let host = parseURL.hostname;
+        let port = parseURL.port || 80;
+        let path = parseURL.path;
         let queryData = "";
         let bodyData = "";
         // if(typeof data == "function"){
@@ -18,8 +20,8 @@ var request = function(method,url,data,func){
         // }
         var opt = {
             method:method,
-            host:strs[0],
-            port:strs[1] || 80,
+            host:host,
+            port:port,
             path:path + "?" + queryData,
             headers: {
                 "Content-Type": 'application/x-www-form-urlencoded',
@@ -68,26 +70,37 @@ var asyncFunc = (function* (){
         yield request(opt.method,opt.url,opt.data);
     }
 }())
-var common = function(){
+var common = function(url,data){
+    if(host){
+        url = host + url;
+    }
+    if(url.search("://") == -1){
+        url = "http://"+url;
+    }
     opt.url = url;
     opt.data = data;
     return asyncFunc.next().value;
 }
-exports.get = function(url,data){
+var get = function(url,data){
     opt.method = "get";
     return common(url,data);
 }
-exports.post = function(url,data){
+var post = function(url,data){
     opt.method = "post";
     return common(url,data);
 }
-exports.delete = function(url,data){
+var del = function(url,data){
     opt.method = "delete";
     return common(url,data);
 }
-exports.put = function(url,data){
+var put = function(url,data){
     opt.method = "put";
     return common(url,data);
 }
 
-exports.url = "localhost:8080";
+var host;
+module.exports = {
+    get,post,put,delete:del,url:function(param){
+        host = param;
+    }
+}
