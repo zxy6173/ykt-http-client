@@ -1,76 +1,37 @@
-var http = require("http");
-var querystring =  require("querystring");
-var urlobj = require("url");
-var request = function(method,url,data,func){
-    let promise = new Promise(function(resolve,reject){
-        let parseURL = urlobj.parse(url);
-        let host = parseURL.hostname;
-        let port = parseURL.port || 80;
-        let path = parseURL.path;
-        let queryData = "";
-        let bodyData = "";
-        // if(typeof data == "function"){
-        //    func = data;
-        // }else{
+const http = require("http");
+const querystring =  require("querystring");
+const urlobj = require("url");
+const fetch = require("node-fetch");
+const request = function(method,url,data){
+    
+            let opt = {
+                method:method
+              
+            };
             if(method.toLowerCase() == "get"){
-                queryData = querystring.stringify(data);
+                url += "?"+querystring.stringify(data);
             }else{
-                bodyData = querystring.stringify(data);
-            }
-        // }
-        var opt = {
-            method:method,
-            host:host,
-            port:port,
-            path:path + "?" + queryData,
-            headers: {
-                "Content-Type": 'application/x-www-form-urlencoded',
-                "User-Agent": 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36'
-            }
-        };
-        var req = http.request(opt, function (serverFeedback) {
+                opt.headers = { 'Content-Type': 'application/json' };
+                opt.body = JSON.stringify(data);
 
-            
-            if (serverFeedback.statusCode == 200) {
-
-                var body = "";
-                serverFeedback.on('data', function (data) {
-                    // console.log("data",data.toString());
-                    if(typeof data == 'object'){
-                        body += data.toString("utf-8");
-                    }else{
-                        body += data;
-                    }
+            }
+        
+        return new Promise(function(resolve,reject){
+            fetch(url,opt).then(function(res){
+                res.text().then(function(data){
+                    try{
+                        data = JSON.parse(data);
+                    }catch(e){}
+                    resolve(data);
                     
-                    
-                })
-                .on('end', function () {
-                        try{
-                            resolve(JSON.parse(body));
-                        }catch(e){
-                            resolve(body);
-                        }
-
-
-                    });
-            } else {
-                // func();
-                resolve();
-            }
+                });
+            });
         });
-        req.write(bodyData);
-        req.end();
-    });
-    return promise;
-
+        
+       
 }
-var opt = {};
-var asyncFunc = (function* (){
-    for(;;){
-        yield request(opt.method,opt.url,opt.data);
-    }
-}())
-var common = function(url,data){
+let opt = {};
+let common = function(url,data){
     if(host){
         url = host + url;
     }
@@ -79,26 +40,26 @@ var common = function(url,data){
     }
     opt.url = url;
     opt.data = data;
-    return asyncFunc.next().value;
+    return request(opt.method,url,data);
 }
-var get = function(url,data){
-    opt.method = "get";
+let get = function(url,data){
+    opt.method = "GET";
     return common(url,data);
 }
-var post = function(url,data){
-    opt.method = "post";
+let post = function(url,data){
+    opt.method = "POST";
     return common(url,data);
 }
-var del = function(url,data){
-    opt.method = "delete";
+let del = function(url,data){
+    opt.method = "DELETE";
     return common(url,data);
 }
-var put = function(url,data){
-    opt.method = "put";
+let put = function(url,data){
+    opt.method = "PUT";
     return common(url,data);
 }
 
-var host;
+let host;
 module.exports = {
     get,post,put,delete:del,url:function(param){
         host = param;
